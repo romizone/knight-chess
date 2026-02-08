@@ -349,9 +349,10 @@ export default function Board({
                                         ? `translate(${animOffsetX}px, ${animOffsetY}px)`
                                         : 'translate(0, 0)',
                                     transition: isAnimatingHere ? 'none' : 'transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1)',
-                                    filter: piece.color === 'white'
-                                        ? 'drop-shadow(1px 1px 2px rgba(0,0,0,0.4))'
-                                        : 'drop-shadow(1px 1px 1px rgba(0,0,0,0.3))',
+                                    color: piece.color === 'white' ? '#FFFFFF' : '#1a1a1a',
+                                    textShadow: piece.color === 'white'
+                                        ? '-1px -1px 0 #333, 1px -1px 0 #333, -1px 1px 0 #333, 1px 1px 0 #333, 0 0 4px rgba(0,0,0,0.3)'
+                                        : '-1px -1px 0 #666, 1px -1px 0 #666, -1px 1px 0 #666, 1px 1px 0 #666, 0 0 3px rgba(0,0,0,0.2)',
                                     willChange: 'transform',
                                 }}
                                 ref={(el) => {
@@ -403,7 +404,10 @@ export default function Board({
                         transform: 'translate(-50%, -50%)',
                         fontSize: `${getSquareSize() * 1.1}px`,
                         lineHeight: 1,
-                        filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.4))',
+                        color: dragPiece.piece.color === 'white' ? '#FFFFFF' : '#1a1a1a',
+                        textShadow: dragPiece.piece.color === 'white'
+                            ? '-1px -1px 0 #333, 1px -1px 0 #333, -1px 1px 0 #333, 1px 1px 0 #333, 0 2px 8px rgba(0,0,0,0.5)'
+                            : '-1px -1px 0 #666, 1px -1px 0 #666, -1px 1px 0 #666, 1px 1px 0 #666, 0 2px 8px rgba(0,0,0,0.4)',
                         opacity: 0.92,
                         willChange: 'left, top',
                     }}
