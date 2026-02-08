@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { users, tokenTransactions } from '@/lib/db/schema';
+import { users, tokenTransactions, games } from '@/lib/db/schema';
 import { eq, sql, desc } from 'drizzle-orm';
 
 export async function deductGameStake(userId: string, gameId: string): Promise<boolean> {
@@ -40,9 +40,21 @@ export async function settleGameResult(
       .where(eq(users.id, userId));
   }
 
-  // Update game stats
+  // Calculate rating change (simplified ELO)
+  // AI ratings: easy=800, medium=1200, difficult=1600
+  const aiRatings: Record<string, number> = { easy: 800, medium: 1200, difficult: 1600 };
+  // Get the game to find difficulty
+  const [game] = await db.select({ difficulty: games.difficulty }).from(games).where(eq(games.id, gameId));
+  const opponentRating = game?.difficulty ? (aiRatings[game.difficulty] || 1200) : 1200;
+  const K = 32; // ELO K-factor
+  const expected = 1 / (1 + Math.pow(10, (opponentRating - user.rating) / 400));
+  const actual = result === 'win' ? 1 : result === 'draw' ? 0.5 : 0;
+  const ratingChange = Math.round(K * (actual - expected));
+
+  // Update game stats + rating
   const statsUpdate: Record<string, unknown> = {
     totalGames: sql`${users.totalGames} + 1`,
+    rating: sql`${users.rating} + ${ratingChange}`,
   };
   if (result === 'win') {
     statsUpdate.wins = sql`${users.wins} + 1`;
