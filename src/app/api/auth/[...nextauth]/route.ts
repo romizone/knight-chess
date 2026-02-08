@@ -3,17 +3,9 @@ export const dynamic = 'force-dynamic';
 import NextAuth from 'next-auth';
 import { getAuthOptions } from '@/lib/auth/options';
 
-// Lazy handler - getAuthOptions() is only called when a request comes in
-function getHandler() {
-  return NextAuth(getAuthOptions());
-}
+// NextAuth v4 with App Router expects the handler to receive (req, context)
+// where context = { params: { nextauth: string[] } }.
+// It uses context.params to detect App Router and to extract the auth action.
+const handler = NextAuth(getAuthOptions());
 
-export async function GET(request: Request) {
-  const handler = getHandler();
-  return handler(request);
-}
-
-export async function POST(request: Request) {
-  const handler = getHandler();
-  return handler(request);
-}
+export { handler as GET, handler as POST };
