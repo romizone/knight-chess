@@ -2,14 +2,19 @@ import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { getDatabase } from '@/lib/db';
-import { users, tokenTransactions } from '@/lib/db/schema';
+import { users, accounts, sessions, verificationTokens, tokenTransactions } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export function getAuthOptions(): NextAuthOptions {
   const db = getDatabase();
 
   return {
-    adapter: DrizzleAdapter(db) as NextAuthOptions['adapter'],
+    adapter: DrizzleAdapter(db, {
+      usersTable: users,
+      accountsTable: accounts,
+      sessionsTable: sessions,
+      verificationTokensTable: verificationTokens,
+    }) as NextAuthOptions['adapter'],
     providers: [
       GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID!,

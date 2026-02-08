@@ -3,9 +3,20 @@ export const dynamic = 'force-dynamic';
 import NextAuth from 'next-auth';
 import { getAuthOptions } from '@/lib/auth/options';
 
-// NextAuth v4 with App Router expects the handler to receive (req, context)
-// where context = { params: { nextauth: string[] } }.
-// It uses context.params to detect App Router and to extract the auth action.
-const handler = NextAuth(getAuthOptions());
+// Lazy handler creation - ensures env vars are available at request time
+let _handler: ReturnType<typeof NextAuth> | null = null;
+function getHandler() {
+  if (!_handler) {
+    _handler = NextAuth(getAuthOptions());
+  }
+  return _handler;
+}
 
-export { handler as GET, handler as POST };
+// App Router passes (req, context) automatically when we export like this
+export async function GET(...args: Parameters<ReturnType<typeof NextAuth>>) {
+  return getHandler()(...args);
+}
+
+export async function POST(...args: Parameters<ReturnType<typeof NextAuth>>) {
+  return getHandler()(...args);
+}

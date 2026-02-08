@@ -24,8 +24,9 @@ export default function PlayComputerPage() {
                 }),
             });
             const data = await res.json();
-            if (data.success && data.data?.id) {
-                router.push(`/game/${data.data.id}?difficulty=${difficulty}`);
+            if (data.success && (data.data?.gameId || data.data?.id)) {
+                const gameId = data.data.gameId || data.data.id;
+                router.push(`/game/${gameId}?difficulty=${difficulty}`);
             } else {
                 alert(data.error || 'Failed to create game');
                 setLoading(null);
