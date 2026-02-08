@@ -3,12 +3,14 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { games, users } from '@/lib/db/schema';
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { eq, sql, desc } from 'drizzle-orm';
 
 export async function GET() {
   try {
+    // Use raw SQL for enum comparisons (Drizzle eq() with Neon HTTP has issues with enums)
+    const whereClause = sql`${games.difficulty} = 'difficult' AND ${games.result} = 'white_wins' AND ${games.status} = 'completed' AND ${users.isBanned} = false`;
+
     // Query games where difficulty = 'difficult' and result = 'white_wins' (player always plays white vs computer)
-    // Join with users to get player info
     const wins = await db
       .select({
         gameId: games.id,
@@ -23,14 +25,7 @@ export async function GET() {
       })
       .from(games)
       .innerJoin(users, eq(games.whitePlayerId, users.id))
-      .where(
-        and(
-          eq(games.difficulty, 'difficult'),
-          eq(games.result, 'white_wins'),
-          eq(games.status, 'completed'),
-          sql`${users.isBanned} = false`
-        )
-      )
+      .where(whereClause)
       .orderBy(desc(games.endedAt))
       .limit(100);
 
@@ -42,14 +37,7 @@ export async function GET() {
       })
       .from(games)
       .innerJoin(users, eq(games.whitePlayerId, users.id))
-      .where(
-        and(
-          eq(games.difficulty, 'difficult'),
-          eq(games.result, 'white_wins'),
-          eq(games.status, 'completed'),
-          sql`${users.isBanned} = false`
-        )
-      );
+      .where(whereClause);
 
     return NextResponse.json({
       success: true,
