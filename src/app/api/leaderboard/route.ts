@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 
 export async function GET() {
   try {
@@ -19,7 +19,7 @@ export async function GET() {
       tokenBalance: users.tokenBalance,
     })
     .from(users)
-    .where(eq(users.isBanned, false))
+    .where(sql`${users.isBanned} = false`)
     .orderBy(desc(users.rating), desc(users.wins))
     .limit(100);
 
