@@ -184,11 +184,7 @@ function delay(ms: number): Promise<void> {
 export function getDifficultyInfo(difficulty: GameDifficulty) {
     return {
         ...AI_CONFIG[difficulty],
-        expectedWinRate: {
-            easy: '60-70%',
-            medium: '40-50%',
-            difficult: '20-30%',
-        }[difficulty],
+        expectedWinRate: '20-30%',
     };
 }
 

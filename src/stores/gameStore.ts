@@ -97,10 +97,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Initial state
     gameState: null,
     gameId: null,
-    difficulty: 'medium',
+    difficulty: 'difficult',
     playerColor: 'white',
-    whiteTime: 300,
-    blackTime: 300,
+    whiteTime: 600,
+    blackTime: 600,
     isTimerActive: false,
     isGameOver: false,
     result: null,
@@ -113,7 +113,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Initialize a new game
     initGame: (difficulty: GameDifficulty, playerColor: PieceColor = 'white') => {
         const gameState = createInitialGameState();
-        const timeControl = difficulty === 'difficult' ? 600 : 300;
+        const timeControl = 600; // 10 minutes
 
         set({
             gameState,
@@ -141,7 +141,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Make a move
     makeMove: async (move: Move) => {
-        const { gameState, difficulty, playerColor } = get();
+        const { gameState, playerColor } = get();
         if (!gameState || get().isGameOver || get().isAIThinking) return;
 
         // Validate it's the correct turn
@@ -150,15 +150,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Apply move
         const newState = applyMove(gameState, move);
 
-        // Update timers (add increment)
-        const increment = difficulty === 'easy' ? 3 : 5;
-        const currentTime = playerColor === 'white' ? get().whiteTime : get().blackTime;
-
         set({
             gameState: newState,
             lastMove: move,
-            whiteTime: playerColor === 'white' ? currentTime + increment : get().whiteTime,
-            blackTime: playerColor === 'black' ? currentTime + increment : get().blackTime,
         });
 
         // Check for game over
@@ -205,15 +199,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
                 const newState = applyMove(gameState, aiResponse.move);
 
-                // Add increment for AI
-                const increment = difficulty === 'easy' ? 3 : 5;
-                const aiTime = aiColor === 'white' ? get().whiteTime : get().blackTime;
-
                 set({
                     gameState: newState,
                     lastMove: aiResponse.move,
-                    whiteTime: aiColor === 'white' ? aiTime + increment : get().whiteTime,
-                    blackTime: aiColor === 'black' ? aiTime + increment : get().blackTime,
                     isAIThinking: false,
                     aiThinkingStartTime: null,
                 });

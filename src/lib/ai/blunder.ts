@@ -25,62 +25,31 @@ interface BlunderConfig {
 /**
  * Determine if AI should blunder this turn
  */
-export function shouldBlunder(difficulty: 'easy' | 'medium' | 'difficult'): boolean {
-    const config = AI_CONFIG[difficulty];
+export function shouldBlunder(difficulty: string): boolean {
+    const config = AI_CONFIG[difficulty as keyof typeof AI_CONFIG];
+    if (!config) return false;
     return Math.random() < config.blunderChance;
 }
 
 /**
  * Get blunder configuration for difficulty
  */
-export function getBlunderConfig(difficulty: 'easy' | 'medium' | 'difficult'): BlunderConfig {
-    switch (difficulty) {
-        case 'easy':
-            return {
-                blunderChance: 0.22,
-                blunderTypes: {
-                    hangPiece: true,
-                    missCapture: true,
-                    badTrade: true,
-                    weakMove: true,
-                },
-                safetyChecks: {
-                    neverAllowMateIn1: true,
-                    neverHangQueen: false,
-                    alwaysPlayCheckmate: true,
-                },
-            };
-        case 'medium':
-            return {
-                blunderChance: 0.09,
-                blunderTypes: {
-                    hangPiece: false,
-                    missCapture: true,
-                    badTrade: false,
-                    weakMove: true,
-                },
-                safetyChecks: {
-                    neverAllowMateIn1: true,
-                    neverHangQueen: true,
-                    alwaysPlayCheckmate: true,
-                },
-            };
-        case 'difficult':
-            return {
-                blunderChance: 0.03,
-                blunderTypes: {
-                    hangPiece: false,
-                    missCapture: false,
-                    badTrade: false,
-                    weakMove: true,
-                },
-                safetyChecks: {
-                    neverAllowMateIn1: true,
-                    neverHangQueen: true,
-                    alwaysPlayCheckmate: true,
-                },
-            };
-    }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function getBlunderConfig(_difficulty: string): BlunderConfig {
+    return {
+        blunderChance: 0.03,
+        blunderTypes: {
+            hangPiece: false,
+            missCapture: false,
+            badTrade: false,
+            weakMove: true,
+        },
+        safetyChecks: {
+            neverAllowMateIn1: true,
+            neverHangQueen: true,
+            alwaysPlayCheckmate: true,
+        },
+    };
 }
 
 /**
@@ -90,7 +59,7 @@ export function selectBlunderMove(
     state: GameState,
     moves: Move[],
     bestMove: Move | null,
-    difficulty: 'easy' | 'medium' | 'difficult'
+    difficulty: string
 ): Move | null {
     const config = getBlunderConfig(difficulty);
 
@@ -314,8 +283,9 @@ function shuffleArray<T>(array: T[]): T[] {
 /**
  * Get thinking time for difficulty
  */
-export function getThinkTime(difficulty: 'easy' | 'medium' | 'difficult'): number {
-    const config = AI_CONFIG[difficulty];
+export function getThinkTime(difficulty: string): number {
+    const config = AI_CONFIG[difficulty as keyof typeof AI_CONFIG];
+    if (!config) return 2000;
     const { min, max } = config.thinkTime;
     return min + Math.random() * (max - min);
 }

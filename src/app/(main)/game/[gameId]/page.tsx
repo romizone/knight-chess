@@ -125,7 +125,6 @@ export default function GamePage({ params }: { params: { gameId: string } }) {
 
                 <div className="flex items-center gap-4">
                     {isAIThinking && <ThinkingIndicator />}
-                    <span className="text-sm text-gray-400 capitalize">{difficulty} Mode</span>
                 </div>
             </header>
 
@@ -141,7 +140,7 @@ export default function GamePage({ params }: { params: { gameId: string } }) {
                             </div>
                             <div>
                                 <div className="font-bold">Computer</div>
-                                <div className="text-sm text-gray-400 capitalize">{difficulty}</div>
+                                <div className="text-sm text-gray-400">10 min</div>
                             </div>
                         </div>
                         <Timer

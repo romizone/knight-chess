@@ -26,16 +26,6 @@ const SIMPLE_PIECE_VALUES = {
 };
 
 const AI_CONFIG = {
-    easy: {
-        searchDepth: 2,
-        blunderChance: 0.22,
-        thinkTime: { min: 300, max: 1500 },
-    },
-    medium: {
-        searchDepth: 3,
-        blunderChance: 0.09,
-        thinkTime: { min: 800, max: 2500 },
-    },
     difficult: {
         searchDepth: 5,
         blunderChance: 0.03,
@@ -739,23 +729,11 @@ function applyMoveToBoard(state, move) {
 }
 
 function getBlunderConfig(difficulty) {
-    switch (difficulty) {
-        case 'easy': return {
-            blunderChance: 0.22,
-            blunderTypes: { hangPiece: true, missCapture: true, badTrade: true, weakMove: true },
-            safetyChecks: { neverAllowMateIn1: true, neverHangQueen: false, alwaysPlayCheckmate: true },
-        };
-        case 'medium': return {
-            blunderChance: 0.09,
-            blunderTypes: { hangPiece: false, missCapture: true, badTrade: false, weakMove: true },
-            safetyChecks: { neverAllowMateIn1: true, neverHangQueen: true, alwaysPlayCheckmate: true },
-        };
-        case 'difficult': return {
-            blunderChance: 0.03,
-            blunderTypes: { hangPiece: false, missCapture: false, badTrade: false, weakMove: true },
-            safetyChecks: { neverAllowMateIn1: true, neverHangQueen: true, alwaysPlayCheckmate: true },
-        };
-    }
+    return {
+        blunderChance: 0.03,
+        blunderTypes: { hangPiece: false, missCapture: false, badTrade: false, weakMove: true },
+        safetyChecks: { neverAllowMateIn1: true, neverHangQueen: true, alwaysPlayCheckmate: true },
+    };
 }
 
 function isSafeBlunder(state, move, safety) {
