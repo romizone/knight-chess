@@ -26,16 +26,16 @@ function ThinkingIndicator() {
     }, []);
 
     return (
-        <div className="flex items-center gap-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg px-4 py-2">
+        <div className="flex items-center gap-2">
             <div className="flex gap-1">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
-            <span className="text-sm text-yellow-400 font-medium">
-                AI is thinking...
+            <span className="text-xs text-yellow-400 font-medium">
+                Thinking...
             </span>
-            <span className="text-sm text-yellow-300 font-mono tabular-nums">
+            <span className="text-xs text-yellow-300 font-mono tabular-nums">
                 {elapsed.toFixed(1)}s
             </span>
         </div>
@@ -108,7 +108,7 @@ export default function GamePage({ params }: { params: { gameId: string } }) {
         );
     }
 
-    const timeControl = TIME_CONTROLS[difficulty] || TIME_CONTROLS.medium;
+    const timeControl = TIME_CONTROLS[difficulty] || TIME_CONTROLS.difficult;
     const isPlayerTurn = gameState.turn === playerColor;
     const opponentColor = playerColor === 'white' ? 'black' : 'white';
 
@@ -123,9 +123,6 @@ export default function GamePage({ params }: { params: { gameId: string } }) {
                     </span>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    {isAIThinking && <ThinkingIndicator />}
-                </div>
             </header>
 
             {/* Main Game Area */}
@@ -140,7 +137,11 @@ export default function GamePage({ params }: { params: { gameId: string } }) {
                             </div>
                             <div>
                                 <div className="font-bold">Computer</div>
-                                <div className="text-sm text-gray-400">10 min</div>
+                                {isAIThinking ? (
+                                    <ThinkingIndicator />
+                                ) : (
+                                    <div className="text-sm text-gray-400">10 min</div>
+                                )}
                             </div>
                         </div>
                         <Timer
