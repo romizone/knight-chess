@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Board from '@/components/game/Board';
 import Timer from '@/components/game/Timer';
@@ -12,6 +12,36 @@ import { useSoundStore } from '@/stores/soundStore';
 import { GameDifficulty } from '@/types';
 import { TIME_CONTROLS } from '@/lib/chess/constants';
 
+function ThinkingIndicator() {
+    const [elapsed, setElapsed] = useState(0);
+    const startTimeRef = useRef(Date.now());
+
+    useEffect(() => {
+        startTimeRef.current = Date.now();
+        setElapsed(0);
+        const interval = setInterval(() => {
+            setElapsed(Math.floor((Date.now() - startTimeRef.current) / 100) / 10);
+        }, 100);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="flex items-center gap-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg px-4 py-2">
+            <div className="flex gap-1">
+                <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <span className="text-sm text-yellow-400 font-medium">
+                AI is thinking...
+            </span>
+            <span className="text-sm text-yellow-300 font-mono tabular-nums">
+                {elapsed.toFixed(1)}s
+            </span>
+        </div>
+    );
+}
+
 export default function GamePage({ params }: { params: { gameId: string } }) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -19,7 +49,6 @@ export default function GamePage({ params }: { params: { gameId: string } }) {
 
     const {
         gameState,
-        // gameId is used via params.gameId directly
         playerColor,
         whiteTime,
         blackTime,
@@ -95,11 +124,7 @@ export default function GamePage({ params }: { params: { gameId: string } }) {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {isAIThinking && (
-                        <span className="text-sm text-yellow-400 animate-pulse">
-                            AI is thinking...
-                        </span>
-                    )}
+                    {isAIThinking && <ThinkingIndicator />}
                     <span className="text-sm text-gray-400 capitalize">{difficulty} Mode</span>
                 </div>
             </header>

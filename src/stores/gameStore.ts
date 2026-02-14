@@ -3,8 +3,60 @@
 import { create } from 'zustand';
 import { GameState, Move, GameDifficulty, PieceColor, GameResult, EndReason } from '@/types';
 import { createInitialGameState } from '@/lib/chess/board';
-import { getAIMoveWithDelay } from '@/lib/ai/engine';
 import { applyMove } from '@/lib/chess/applyMove';
+
+// AI Worker singleton
+let aiWorker: Worker | null = null;
+
+function getAIWorker(): Worker {
+    if (!aiWorker) {
+        aiWorker = new Worker('/ai-worker.js');
+    }
+    return aiWorker;
+}
+
+function computeAIMove(
+    gameState: GameState,
+    difficulty: GameDifficulty,
+    aiColor: PieceColor
+): Promise<{
+    move: Move;
+    thinkTime: number;
+    evaluation: number;
+    depth: number;
+    nodesSearched: number;
+    isBlunder: boolean;
+} | null> {
+    return new Promise((resolve, reject) => {
+        const worker = getAIWorker();
+
+        const handler = (e: MessageEvent) => {
+            worker.removeEventListener('message', handler);
+            worker.removeEventListener('error', errorHandler);
+            if (e.data.type === 'moveResult') {
+                resolve(e.data.result);
+            } else if (e.data.type === 'error') {
+                reject(new Error(e.data.error));
+            }
+        };
+
+        const errorHandler = (e: ErrorEvent) => {
+            worker.removeEventListener('message', handler);
+            worker.removeEventListener('error', errorHandler);
+            reject(new Error(e.message || 'Worker error'));
+        };
+
+        worker.addEventListener('message', handler);
+        worker.addEventListener('error', errorHandler);
+
+        worker.postMessage({
+            type: 'computeMove',
+            gameState,
+            difficulty,
+            aiColor,
+        });
+    });
+}
 
 interface GameStore {
     // Game state
@@ -27,6 +79,7 @@ interface GameStore {
     // UI state
     lastMove: Move | null;
     isAIThinking: boolean;
+    aiThinkingStartTime: number | null;
 
     // Actions
     initGame: (difficulty: GameDifficulty, playerColor?: PieceColor) => void;
@@ -55,6 +108,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     tokensWon: 0,
     lastMove: null,
     isAIThinking: false,
+    aiThinkingStartTime: null,
 
     // Initialize a new game
     initGame: (difficulty: GameDifficulty, playerColor: PieceColor = 'white') => {
@@ -75,11 +129,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             tokensWon: 0,
             lastMove: null,
             isAIThinking: false,
+            aiThinkingStartTime: null,
         });
 
         // If player is black, AI moves first
         if (playerColor === 'black') {
-            get().isAIThinking = true;
+            set({ isAIThinking: true, aiThinkingStartTime: Date.now() });
             setTimeout(() => get().makeAIMove(), 500);
         }
     },
@@ -126,11 +181,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
 
         // AI's turn
-        set({ isAIThinking: true });
+        set({ isAIThinking: true, aiThinkingStartTime: Date.now() });
         await get().makeAIMove();
     },
 
-    // Make AI move (internal)
+    // Make AI move (via Web Worker)
     makeAIMove: async () => {
         const { gameState, difficulty, playerColor } = get();
         if (!gameState || get().isGameOver) return;
@@ -138,9 +193,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const aiColor = playerColor === 'white' ? 'black' : 'white';
 
         try {
-            const aiResponse = await getAIMoveWithDelay(gameState, difficulty, aiColor);
+            const aiResponse = await computeAIMove(gameState, difficulty, aiColor);
 
             if (aiResponse && aiResponse.move) {
+                // Simulate remaining think time (worker computes instantly, but we want natural delay)
+                const elapsed = Date.now() - (get().aiThinkingStartTime || Date.now());
+                const remainingDelay = Math.max(0, aiResponse.thinkTime - elapsed);
+                if (remainingDelay > 0) {
+                    await new Promise(resolve => setTimeout(resolve, remainingDelay));
+                }
+
                 const newState = applyMove(gameState, aiResponse.move);
 
                 // Add increment for AI
@@ -153,6 +215,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     whiteTime: aiColor === 'white' ? aiTime + increment : get().whiteTime,
                     blackTime: aiColor === 'black' ? aiTime + increment : get().blackTime,
                     isAIThinking: false,
+                    aiThinkingStartTime: null,
                 });
 
                 // Check for game over after AI move
@@ -172,10 +235,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         isTimerActive: false,
                     });
                 }
+            } else {
+                set({ isAIThinking: false, aiThinkingStartTime: null });
             }
         } catch (error) {
             console.error('AI move error:', error);
-            set({ isAIThinking: false });
+            set({ isAIThinking: false, aiThinkingStartTime: null });
         }
     },
 
@@ -208,6 +273,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             tokensWon: 0,
             lastMove: null,
             isAIThinking: false,
+            aiThinkingStartTime: null,
             isTimerActive: false,
         });
     },
@@ -236,5 +302,3 @@ export const useGameStore = create<GameStore>((set, get) => ({
         });
     },
 }));
-
-// applyMove is now imported from '@/lib/chess/applyMove'
