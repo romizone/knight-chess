@@ -182,9 +182,14 @@ function delay(ms: number): Promise<void> {
  * Get difficulty description
  */
 export function getDifficultyInfo(difficulty: GameDifficulty) {
+    const winRates: Record<GameDifficulty, string> = {
+        easy: '70-80%',
+        medium: '40-50%',
+        difficult: '20-30%',
+    };
     return {
         ...AI_CONFIG[difficulty],
-        expectedWinRate: '20-30%',
+        expectedWinRate: winRates[difficulty] || '20-30%',
     };
 }
 

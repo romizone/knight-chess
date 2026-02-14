@@ -34,8 +34,39 @@ export function shouldBlunder(difficulty: string): boolean {
 /**
  * Get blunder configuration for difficulty
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function getBlunderConfig(_difficulty: string): BlunderConfig {
+export function getBlunderConfig(difficulty: string): BlunderConfig {
+    if (difficulty === 'easy') {
+        return {
+            blunderChance: 0.35,
+            blunderTypes: {
+                hangPiece: true,
+                missCapture: true,
+                badTrade: true,
+                weakMove: true,
+            },
+            safetyChecks: {
+                neverAllowMateIn1: true,
+                neverHangQueen: false,
+                alwaysPlayCheckmate: true,
+            },
+        };
+    }
+    if (difficulty === 'medium') {
+        return {
+            blunderChance: 0.15,
+            blunderTypes: {
+                hangPiece: false,
+                missCapture: true,
+                badTrade: true,
+                weakMove: true,
+            },
+            safetyChecks: {
+                neverAllowMateIn1: true,
+                neverHangQueen: true,
+                alwaysPlayCheckmate: true,
+            },
+        };
+    }
     return {
         blunderChance: 0.03,
         blunderTypes: {

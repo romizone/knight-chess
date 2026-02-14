@@ -6,12 +6,29 @@ import { BOARD_CONFIG, PIECE_UNICODE, COLORS } from '@/lib/chess/constants';
 import { getLegalMovesForSquare } from '@/lib/chess/moves';
 import { getSquareColor, getPieceAt } from '@/lib/chess/board';
 
+// Board color themes per difficulty
+const BOARD_THEMES = {
+    default: {
+        light: COLORS.board.light,   // #F0D9B5
+        dark: COLORS.board.dark,     // #B58863
+        selected: COLORS.board.selected,
+        lastMove: COLORS.board.lastMove,
+    },
+    difficult: {
+        light: '#EEEED2',   // Light green/cream
+        dark: '#769656',    // Green
+        selected: '#BACA44', // Yellow-green highlight
+        lastMove: '#F6F669', // Bright yellow-green
+    },
+};
+
 interface BoardProps {
     gameState: GameState;
     onMove: (move: Move) => void;
     flipped?: boolean;
     disabled?: boolean;
     lastMove?: Move | null;
+    difficulty?: string;
 }
 
 // Animated piece that slides from one square to another
@@ -46,6 +63,10 @@ interface SquareProps {
     disabled: boolean;
     isPlayerPiece: boolean;
     onClick: (file: number, rank: number) => void;
+    themeLight: string;
+    themeDark: string;
+    themeSelected: string;
+    themeLastMove: string;
 }
 
 const BoardSquare = memo(function BoardSquare({
@@ -54,12 +75,13 @@ const BoardSquare = memo(function BoardSquare({
     isKingInCheck, isDragHover, isDragSource, showPiece,
     isAnimatingHere, animOffsetX, animOffsetY, sqSize,
     disabled, isPlayerPiece, onClick,
+    themeLight, themeDark, themeSelected, themeLastMove,
 }: SquareProps) {
-    let bgColor = squareColor === 'light' ? COLORS.board.light : COLORS.board.dark;
-    if (isSelected && !isDragSource) bgColor = COLORS.board.selected;
-    else if (isLastMoveFrom || isLastMoveTo) bgColor = COLORS.board.lastMove;
+    let bgColor = squareColor === 'light' ? themeLight : themeDark;
+    if (isSelected && !isDragSource) bgColor = themeSelected;
+    else if (isLastMoveFrom || isLastMoveTo) bgColor = themeLastMove;
     if (isKingInCheck) bgColor = COLORS.board.check;
-    if (isDragHover && isLegalMove) bgColor = COLORS.board.selected;
+    if (isDragHover && isLegalMove) bgColor = themeSelected;
 
     return (
         <div
@@ -74,7 +96,7 @@ const BoardSquare = memo(function BoardSquare({
             {fileIndex === 0 && (
                 <span
                     className="absolute top-0.5 left-0.5 text-[10px] font-bold leading-none pointer-events-none"
-                    style={{ color: squareColor === 'light' ? COLORS.board.dark : COLORS.board.light }}
+                    style={{ color: squareColor === 'light' ? themeDark : themeLight }}
                 >
                     {rank + 1}
                 </span>
@@ -82,7 +104,7 @@ const BoardSquare = memo(function BoardSquare({
             {rankIndex === BOARD_CONFIG.RANKS - 1 && (
                 <span
                     className="absolute bottom-0.5 right-1 text-[10px] font-bold leading-none pointer-events-none"
-                    style={{ color: squareColor === 'light' ? COLORS.board.dark : COLORS.board.light }}
+                    style={{ color: squareColor === 'light' ? themeDark : themeLight }}
                 >
                     {String.fromCharCode(97 + file)}
                 </span>
@@ -147,7 +169,9 @@ export default function Board({
     flipped = false,
     disabled = false,
     lastMove = null,
+    difficulty = 'easy',
 }: BoardProps) {
+    const theme = difficulty === 'difficult' ? BOARD_THEMES.difficult : BOARD_THEMES.default;
     const boardRef = useRef<HTMLDivElement>(null);
     const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
     const [legalMoves, setLegalMoves] = useState<Move[]>([]);
@@ -416,6 +440,10 @@ export default function Board({
                         disabled={disabled}
                         isPlayerPiece={isPlayerPiece}
                         onClick={handleSquareClick}
+                        themeLight={theme.light}
+                        themeDark={theme.dark}
+                        themeSelected={theme.selected}
+                        themeLastMove={theme.lastMove}
                     />
                 );
             }
@@ -424,7 +452,7 @@ export default function Board({
         return result;
     }, [gameState.board, gameState.turn, gameState.isCheck, flipped, disabled,
         selectedSquare, lastMove, legalMoveSquares, captureSquares,
-        hoverSquare, dragging, dragPiece, animatingPiece, getSquareSize, handleSquareClick]);
+        hoverSquare, dragging, dragPiece, animatingPiece, getSquareSize, handleSquareClick, theme]);
 
     return (
         <div className="inline-block touch-none">

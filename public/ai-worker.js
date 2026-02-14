@@ -26,6 +26,16 @@ const SIMPLE_PIECE_VALUES = {
 };
 
 const AI_CONFIG = {
+    easy: {
+        searchDepth: 2,
+        blunderChance: 0.35,
+        thinkTime: { min: 500, max: 1500 },
+    },
+    medium: {
+        searchDepth: 3,
+        blunderChance: 0.15,
+        thinkTime: { min: 1000, max: 2500 },
+    },
     difficult: {
         searchDepth: 5,
         blunderChance: 0.03,
@@ -729,6 +739,20 @@ function applyMoveToBoard(state, move) {
 }
 
 function getBlunderConfig(difficulty) {
+    if (difficulty === 'easy') {
+        return {
+            blunderChance: 0.35,
+            blunderTypes: { hangPiece: true, missCapture: true, badTrade: true, weakMove: true },
+            safetyChecks: { neverAllowMateIn1: true, neverHangQueen: false, alwaysPlayCheckmate: true },
+        };
+    }
+    if (difficulty === 'medium') {
+        return {
+            blunderChance: 0.15,
+            blunderTypes: { hangPiece: false, missCapture: true, badTrade: true, weakMove: true },
+            safetyChecks: { neverAllowMateIn1: true, neverHangQueen: true, alwaysPlayCheckmate: true },
+        };
+    }
     return {
         blunderChance: 0.03,
         blunderTypes: { hangPiece: false, missCapture: false, badTrade: false, weakMove: true },

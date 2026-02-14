@@ -47,7 +47,7 @@ export interface GameState {
     isDraw: boolean;
 }
 
-export type GameDifficulty = 'difficult';
+export type GameDifficulty = 'easy' | 'medium' | 'difficult';
 export type GameType = 'vs_computer' | 'pvp';
 export type GameStatus = 'waiting' | 'active' | 'completed' | 'abandoned';
 export type GameResult = 'white_wins' | 'black_wins' | 'draw' | null;

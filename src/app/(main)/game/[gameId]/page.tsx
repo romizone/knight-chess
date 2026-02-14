@@ -160,6 +160,7 @@ export default function GamePage({ params }: { params: { gameId: string } }) {
                             flipped={playerColor === 'black'}
                             lastMove={lastMove}
                             disabled={isGameOver || !isPlayerTurn || isAIThinking}
+                            difficulty={difficulty}
                         />
                     </div>
 

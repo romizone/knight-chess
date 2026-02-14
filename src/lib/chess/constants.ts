@@ -52,6 +52,20 @@ export const PIECE_UNICODE: Record<PieceColor, Record<PieceType, string>> = {
 
 // Time controls
 export const TIME_CONTROLS: Record<string, TimeControl & { name: string; label: string; category: string }> = {
+    easy: {
+        name: 'Easy',
+        base: 600, // 10 minutes
+        increment: 0, // No increment - pure countdown
+        label: '10+0',
+        category: 'Rapid',
+    },
+    medium: {
+        name: 'Medium',
+        base: 600, // 10 minutes
+        increment: 0, // No increment - pure countdown
+        label: '10+0',
+        category: 'Rapid',
+    },
     difficult: {
         name: 'Difficult',
         base: 600, // 10 minutes
@@ -63,6 +77,20 @@ export const TIME_CONTROLS: Record<string, TimeControl & { name: string; label: 
 
 // AI configuration
 export const AI_CONFIG = {
+    easy: {
+        name: 'Easy',
+        description: 'Relaxed game - frequent mistakes',
+        searchDepth: 2,
+        blunderChance: 0.35,
+        thinkTime: { min: 500, max: 1500, avg: 1000 },
+    },
+    medium: {
+        name: 'Medium',
+        description: 'Balanced challenge - occasional mistakes',
+        searchDepth: 3,
+        blunderChance: 0.15,
+        thinkTime: { min: 1000, max: 2500, avg: 1500 },
+    },
     difficult: {
         name: 'Difficult',
         description: 'Strong opponent - few mistakes',
@@ -124,6 +152,18 @@ export const COLORS = {
 
 // Idle warning thresholds (seconds)
 export const IDLE_CONFIG = {
+    easy: {
+        gentleReminder: 60,
+        warningThreshold: 120,
+        urgentThreshold: 180,
+        criticalThreshold: 240,
+    },
+    medium: {
+        gentleReminder: 50,
+        warningThreshold: 100,
+        urgentThreshold: 160,
+        criticalThreshold: 200,
+    },
     difficult: {
         gentleReminder: 45,
         warningThreshold: 90,
@@ -134,6 +174,16 @@ export const IDLE_CONFIG = {
 
 // Low time warning thresholds (seconds)
 export const LOW_TIME_CONFIG = {
+    easy: {
+        warning: 120,
+        critical: 60,
+        urgent: 20,
+    },
+    medium: {
+        warning: 120,
+        critical: 60,
+        urgent: 20,
+    },
     difficult: {
         warning: 120,
         critical: 60,

@@ -110,9 +110,9 @@ export default function HomePage() {
                             }}
                         >
                             <div className="text-5xl mb-4">&#9876;&#65039;</div>
-                            <h3 className="text-xl font-bold mb-2 text-blue-400">Strong AI</h3>
+                            <h3 className="text-xl font-bold mb-2 text-blue-400">3 AI Levels</h3>
                             <p className="text-gray-400">
-                                Challenge our AI with depth-5 minimax search.
+                                Easy, Medium, or Difficult. Minimax AI with depth up to 5.
                                 10-minute countdown timer, just like chess.com.
                             </p>
                         </motion.div>
