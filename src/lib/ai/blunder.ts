@@ -1,9 +1,10 @@
 // Blunder System for Knight Chess AI
 // Makes AI intentionally make mistakes based on difficulty level
+// Optimized: uses lightweight board clones instead of full state clones
 
-import { GameState, Move, PieceColor, PieceType } from '@/types';
-import { generateLegalMoves, isInCheck } from '../chess/moves';
-import { cloneGameState, setPieceAt, getPieceAt } from '../chess/board';
+import { GameState, Move, PieceColor, PieceType, Piece } from '@/types';
+import { generateLegalMoves, isInCheck, isSquareAttacked } from '../chess/moves';
+import { cloneBoard } from '../chess/board';
 import { AI_CONFIG } from '../chess/constants';
 
 interface BlunderConfig {
@@ -97,10 +98,9 @@ export function selectBlunderMove(
     const safeMoves = moves.filter(move => isSafeBlunder(state, move, config.safetyChecks));
 
     if (safeMoves.length === 0) {
-        return bestMove; // Fall back to best move if no safe blunders
+        return bestMove;
     }
 
-    // Select blunder type
     const availableTypes: string[] = [];
     if (config.blunderTypes.hangPiece) availableTypes.push('hangPiece');
     if (config.blunderTypes.missCapture) availableTypes.push('missCapture');
@@ -127,17 +127,79 @@ export function selectBlunderMove(
 }
 
 /**
+ * Apply a move to a board clone (lightweight, no full state clone)
+ */
+function applyMoveToBoard(state: GameState, move: Move): { board: (Piece | null)[][]; turn: PieceColor } {
+    const board = cloneBoard(state.board);
+
+    const piece = move.promotion
+        ? { type: move.promotion, color: move.piece.color } as Piece
+        : move.piece;
+
+    board[move.from.rank][move.from.file] = null;
+    board[move.to.rank][move.to.file] = piece;
+
+    if (move.isEnPassant) {
+        board[move.from.rank][move.to.file] = null;
+    }
+
+    if (move.isCastling) {
+        const rank = move.from.rank;
+        if (move.isCastling === 'kingside') {
+            board[rank][5] = board[rank][7];
+            board[rank][7] = null;
+        } else {
+            board[rank][3] = board[rank][0];
+            board[rank][0] = null;
+        }
+    }
+
+    const turn: PieceColor = state.turn === 'white' ? 'black' : 'white';
+    return { board, turn };
+}
+
+/**
  * Check if a blunder move is safe (doesn't violate safety rules)
  */
 function isSafeBlunder(state: GameState, move: Move, safety: BlunderConfig['safetyChecks']): boolean {
-    const newState = applyMove(state, move);
+    const { board, turn: oppTurn } = applyMoveToBoard(state, move);
+    const oppCheck = isInCheck(board, oppTurn);
 
     // Never allow mate in 1 against us
     if (safety.neverAllowMateIn1) {
-        const opponentMoves = generateLegalMoves(newState);
+        const tempState: GameState = {
+            ...state,
+            board,
+            turn: oppTurn,
+            isCheck: oppCheck,
+            isCheckmate: false,
+            isStalemate: false,
+            isDraw: false,
+            enPassantTarget: null,
+            moveHistory: [],
+        };
+
+        const opponentMoves = generateLegalMoves(tempState);
         for (const oppMove of opponentMoves) {
-            const afterOppMove = applyMove(newState, oppMove);
-            if (afterOppMove.isCheckmate) {
+            const after = applyMoveToBoard(tempState, oppMove);
+            const ourColor = state.turn;
+            const ourCheck = isInCheck(after.board, ourColor);
+            if (!ourCheck) continue;
+
+            // Check if we have any legal response
+            const ourState: GameState = {
+                ...state,
+                board: after.board,
+                turn: ourColor,
+                isCheck: ourCheck,
+                isCheckmate: false,
+                isStalemate: false,
+                isDraw: false,
+                enPassantTarget: null,
+                moveHistory: [],
+            };
+            const ourMoves = generateLegalMoves(ourState);
+            if (ourMoves.length === 0) {
                 return false;
             }
         }
@@ -145,7 +207,8 @@ function isSafeBlunder(state: GameState, move: Move, safety: BlunderConfig['safe
 
     // Never hang queen
     if (safety.neverHangQueen && move.piece.type === 'queen') {
-        if (isSquareAttackedAfterMove(newState, move.to, state.turn === 'white' ? 'black' : 'white')) {
+        const oppColor = state.turn === 'white' ? 'black' : 'white';
+        if (isSquareAttacked(board, move.to, oppColor)) {
             return false;
         }
     }
@@ -159,10 +222,10 @@ function isSafeBlunder(state: GameState, move: Move, safety: BlunderConfig['safe
 function findHangingMove(moves: Move[], state: GameState): Move | null {
     for (const move of shuffleArray([...moves])) {
         if (move.piece.type !== 'king' && move.piece.type !== 'queen') {
-            const newState = applyMove(state, move);
+            const { board } = applyMoveToBoard(state, move);
             const oppColor = state.turn === 'white' ? 'black' : 'white';
 
-            if (isSquareAttackedAfterMove(newState, move.to, oppColor)) {
+            if (isSquareAttacked(board, move.to, oppColor)) {
                 return move;
             }
         }
@@ -177,10 +240,8 @@ function findNonCapture(moves: Move[]): Move | null {
     const captures = moves.filter(m => m.captured);
     const nonCaptures = moves.filter(m => !m.captured);
 
-    // Only "miss" if there are good captures available
     if (captures.length > 0 && nonCaptures.length > 0) {
-        const randomNonCapture = nonCaptures[Math.floor(Math.random() * nonCaptures.length)];
-        return randomNonCapture;
+        return nonCaptures[Math.floor(Math.random() * nonCaptures.length)];
     }
 
     return null;
@@ -201,15 +262,13 @@ function findBadTrade(moves: Move[], state: GameState): Move | null {
 
     for (const move of shuffleArray([...moves])) {
         if (move.captured) {
+            const { board } = applyMoveToBoard(state, move);
             const oppColor = state.turn === 'white' ? 'black' : 'white';
-            const newState = applyMove(state, move);
 
-            if (isSquareAttackedAfterMove(newState, move.to, oppColor)) {
-                // We capture but lose our piece
+            if (isSquareAttacked(board, move.to, oppColor)) {
                 const ourValue = pieceValues[move.piece.type];
                 const theirValue = pieceValues[move.captured.type];
 
-                // Bad trade: we lose more than we gain
                 if (ourValue > theirValue) {
                     return move;
                 }
@@ -225,7 +284,6 @@ function findBadTrade(moves: Move[], state: GameState): Move | null {
 function selectWeakMove(moves: Move[], bestMove: Move | null): Move | null {
     if (moves.length <= 1) return moves[0] || bestMove;
 
-    // If we have a best move, try to select something else
     if (bestMove) {
         const otherMoves = moves.filter(
             m => !(m.from.file === bestMove.from.file && m.from.rank === bestMove.from.rank &&
@@ -233,73 +291,13 @@ function selectWeakMove(moves: Move[], bestMove: Move | null): Move | null {
         );
 
         if (otherMoves.length > 0) {
-            // Select from bottom half of moves (weaker moves)
             const midPoint = Math.floor(otherMoves.length / 2);
             const weakerMoves = otherMoves.slice(midPoint);
             return weakerMoves[Math.floor(Math.random() * weakerMoves.length)];
         }
     }
 
-    // Random move
     return moves[Math.floor(Math.random() * moves.length)];
-}
-
-/**
- * Check if square is attacked after a move
- */
-function isSquareAttackedAfterMove(
-    state: GameState,
-    square: { file: number; rank: number },
-    byColor: PieceColor
-): boolean {
-    // Simplified check - just see if any piece can reach that square
-    const pieces = [];
-    for (let rank = 0; rank < 9; rank++) {
-        for (let file = 0; file < 8; file++) {
-            const piece = getPieceAt(state.board, { file, rank });
-            if (piece && piece.color === byColor) {
-                pieces.push({ piece, square: { file, rank } });
-            }
-        }
-    }
-
-    // Create temporary state for that color's turn
-    const tempState = cloneGameState(state);
-    tempState.turn = byColor;
-
-    const moves = generateLegalMoves(tempState);
-    return moves.some(m => m.to.file === square.file && m.to.rank === square.rank);
-}
-
-/**
- * Apply move to state (helper)
- */
-function applyMove(state: GameState, move: Move): GameState {
-    const newState = cloneGameState(state);
-
-    const piece = move.promotion
-        ? { type: move.promotion, color: move.piece.color }
-        : move.piece;
-
-    newState.board = setPieceAt(
-        setPieceAt(state.board, move.from, null),
-        move.to,
-        piece
-    );
-
-    newState.turn = state.turn === 'white' ? 'black' : 'white';
-    newState.isCheck = isInCheck(newState.board, newState.turn);
-
-    const legalMoves = generateLegalMoves(newState);
-    if (legalMoves.length === 0) {
-        if (newState.isCheck) {
-            newState.isCheckmate = true;
-        } else {
-            newState.isStalemate = true;
-        }
-    }
-
-    return newState;
 }
 
 /**

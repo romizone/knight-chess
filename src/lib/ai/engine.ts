@@ -2,7 +2,7 @@
 
 import { GameState, Move, PieceColor, GameDifficulty } from '@/types';
 import { generateLegalMoves, isInCheck } from '../chess/moves';
-import { cloneGameState, setPieceAt } from '../chess/board';
+import { cloneGameState, cloneBoard } from '../chess/board';
 import { AI_CONFIG } from '../chess/constants';
 import { findBestMove } from './minimax';
 import { shouldBlunder, selectBlunderMove, getThinkTime } from './blunder';
@@ -56,11 +56,11 @@ export async function getAIMove(
         };
     }
 
-    // Find best move using minimax
-    const searchResult = findBestMove(state, config.searchDepth, aiColor);
+    // Clone state once for minimax (it mutates internally via make/unmake)
+    const searchState = cloneGameState(state);
+    const searchResult = findBestMove(searchState, config.searchDepth, aiColor);
 
     if (!searchResult.move) {
-        // Fallback to random legal move
         const randomMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
         return {
             move: randomMove,
@@ -102,6 +102,9 @@ export async function getAIMoveWithDelay(
     difficulty: GameDifficulty,
     aiColor: PieceColor
 ): Promise<AIResponse | null> {
+    // Yield to browser before heavy computation
+    await new Promise(resolve => setTimeout(resolve, 0));
+
     const result = await getAIMove(state, difficulty, aiColor);
 
     if (!result) return null;
@@ -113,44 +116,59 @@ export async function getAIMoveWithDelay(
 }
 
 /**
- * Find immediate checkmate move
+ * Find immediate checkmate move (lightweight check)
  */
 function findCheckmateMove(state: GameState, moves: Move[]): Move | null {
     for (const move of moves) {
-        // Quick check if this move gives checkmate
-        const newState = applyMoveQuick(state, move);
-        if (newState.isCheckmate) {
+        const newBoard = cloneBoard(state.board);
+
+        const piece = move.promotion
+            ? { type: move.promotion, color: move.piece.color } as const
+            : move.piece;
+
+        newBoard[move.from.rank][move.from.file] = null;
+        newBoard[move.to.rank][move.to.file] = piece;
+
+        // Handle en passant
+        if (move.isEnPassant) {
+            newBoard[move.from.rank][move.to.file] = null;
+        }
+
+        // Handle castling
+        if (move.isCastling) {
+            const rank = move.from.rank;
+            if (move.isCastling === 'kingside') {
+                newBoard[rank][5] = newBoard[rank][7];
+                newBoard[rank][7] = null;
+            } else {
+                newBoard[rank][3] = newBoard[rank][0];
+                newBoard[rank][0] = null;
+            }
+        }
+
+        const opponentColor = state.turn === 'white' ? 'black' : 'white';
+        if (!isInCheck(newBoard, opponentColor)) {
+            continue;
+        }
+
+        // Check if opponent has any legal response
+        const tempState: GameState = {
+            ...state,
+            board: newBoard,
+            turn: opponentColor,
+            isCheck: true,
+            isCheckmate: false,
+            isStalemate: false,
+            isDraw: false,
+            enPassantTarget: null,
+        };
+
+        const opponentMoves = generateLegalMoves(tempState);
+        if (opponentMoves.length === 0) {
             return move;
         }
     }
     return null;
-}
-
-/**
- * Quick move application for checkmate detection
- */
-function applyMoveQuick(state: GameState, move: Move): { isCheckmate: boolean } {
-    const newState = cloneGameState(state);
-
-    const piece = move.promotion
-        ? { type: move.promotion, color: move.piece.color }
-        : move.piece;
-
-    newState.board = setPieceAt(
-        setPieceAt(state.board, move.from, null),
-        move.to,
-        piece
-    );
-
-    newState.turn = state.turn === 'white' ? 'black' : 'white';
-    newState.isCheck = isInCheck(newState.board, newState.turn);
-
-    if (!newState.isCheck) {
-        return { isCheckmate: false };
-    }
-
-    const opponentMoves = generateLegalMoves(newState);
-    return { isCheckmate: opponentMoves.length === 0 };
 }
 
 /**
@@ -183,7 +201,8 @@ export function analyzePosition(state: GameState, depth: number = 4): {
     threats: string[];
 } {
     const aiColor = state.turn;
-    const result = findBestMove(state, depth, aiColor);
+    const searchState = cloneGameState(state);
+    const result = findBestMove(searchState, depth, aiColor);
 
     return {
         evaluation: result.score,
@@ -201,8 +220,6 @@ function detectThreats(state: GameState): string[] {
     if (state.isCheck) {
         threats.push('King is in check');
     }
-
-    // Add more threat detection as needed
 
     return threats;
 }

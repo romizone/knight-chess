@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect, memo } from 'react';
 import { GameState, Square, Move, Piece } from '@/types';
 import { BOARD_CONFIG, PIECE_UNICODE, COLORS } from '@/lib/chess/constants';
 import { getLegalMovesForSquare } from '@/lib/chess/moves';
@@ -22,6 +22,124 @@ interface AnimatingPiece {
     toFile: number;
     toRank: number;
 }
+
+interface SquareProps {
+    file: number;
+    rank: number;
+    fileIndex: number;
+    rankIndex: number;
+    piece: Piece | null;
+    squareColor: 'light' | 'dark';
+    isSelected: boolean;
+    isLastMoveFrom: boolean;
+    isLastMoveTo: boolean;
+    isLegalMove: boolean;
+    isCapture: boolean;
+    isKingInCheck: boolean;
+    isDragHover: boolean;
+    isDragSource: boolean;
+    showPiece: boolean;
+    isAnimatingHere: boolean;
+    animOffsetX: number;
+    animOffsetY: number;
+    sqSize: number;
+    disabled: boolean;
+    isPlayerPiece: boolean;
+    onClick: (file: number, rank: number) => void;
+}
+
+const BoardSquare = memo(function BoardSquare({
+    file, rank, fileIndex, rankIndex, piece, squareColor,
+    isSelected, isLastMoveFrom, isLastMoveTo, isLegalMove, isCapture,
+    isKingInCheck, isDragHover, isDragSource, showPiece,
+    isAnimatingHere, animOffsetX, animOffsetY, sqSize,
+    disabled, isPlayerPiece, onClick,
+}: SquareProps) {
+    let bgColor = squareColor === 'light' ? COLORS.board.light : COLORS.board.dark;
+    if (isSelected && !isDragSource) bgColor = COLORS.board.selected;
+    else if (isLastMoveFrom || isLastMoveTo) bgColor = COLORS.board.lastMove;
+    if (isKingInCheck) bgColor = COLORS.board.check;
+    if (isDragHover && isLegalMove) bgColor = COLORS.board.selected;
+
+    return (
+        <div
+            className="relative flex items-center justify-center select-none"
+            style={{
+                backgroundColor: bgColor,
+                aspectRatio: '1',
+                cursor: disabled ? 'default' : isPlayerPiece ? 'grab' : isLegalMove ? 'pointer' : 'default',
+            }}
+            onClick={() => onClick(file, rank)}
+        >
+            {fileIndex === 0 && (
+                <span
+                    className="absolute top-0.5 left-0.5 text-[10px] font-bold leading-none pointer-events-none"
+                    style={{ color: squareColor === 'light' ? COLORS.board.dark : COLORS.board.light }}
+                >
+                    {rank + 1}
+                </span>
+            )}
+            {rankIndex === BOARD_CONFIG.RANKS - 1 && (
+                <span
+                    className="absolute bottom-0.5 right-1 text-[10px] font-bold leading-none pointer-events-none"
+                    style={{ color: squareColor === 'light' ? COLORS.board.dark : COLORS.board.light }}
+                >
+                    {String.fromCharCode(97 + file)}
+                </span>
+            )}
+
+            {isLegalMove && !isCapture && (
+                <div
+                    className="absolute rounded-full pointer-events-none z-10"
+                    style={{
+                        width: '28%',
+                        height: '28%',
+                        backgroundColor: 'rgba(0,0,0,0.12)',
+                    }}
+                />
+            )}
+
+            {isCapture && (
+                <div
+                    className="absolute inset-[4%] rounded-full pointer-events-none z-10"
+                    style={{
+                        border: '5px solid rgba(0,0,0,0.12)',
+                    }}
+                />
+            )}
+
+            {showPiece && piece && (
+                <span
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
+                    style={{
+                        fontSize: `${sqSize * 0.78}px`,
+                        lineHeight: 1,
+                        transform: isAnimatingHere
+                            ? `translate(${animOffsetX}px, ${animOffsetY}px)`
+                            : 'translate(0, 0)',
+                        transition: isAnimatingHere ? 'none' : 'transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1)',
+                        color: piece.color === 'white' ? '#FFFFFF' : '#1a1a1a',
+                        textShadow: piece.color === 'white'
+                            ? '-1px -1px 0 #333, 1px -1px 0 #333, -1px 1px 0 #333, 1px 1px 0 #333, 0 0 4px rgba(0,0,0,0.3)'
+                            : '-1px -1px 0 #666, 1px -1px 0 #666, -1px 1px 0 #666, 1px 1px 0 #666, 0 0 3px rgba(0,0,0,0.2)',
+                        willChange: 'transform',
+                    }}
+                    ref={(el) => {
+                        if (el && isAnimatingHere) {
+                            el.getBoundingClientRect();
+                            requestAnimationFrame(() => {
+                                el.style.transform = 'translate(0, 0)';
+                                el.style.transition = 'transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
+                            });
+                        }
+                    }}
+                >
+                    {PIECE_UNICODE[piece.color][piece.type]}
+                </span>
+            )}
+        </div>
+    );
+});
 
 export default function Board({
     gameState,
@@ -165,7 +283,6 @@ export default function Board({
         const piece = getPieceAt(gameState.board, square);
         if (!piece || piece.color !== gameState.turn) return;
 
-        // Prevent text selection and default touch behavior
         e.preventDefault();
 
         setDragPiece({ piece, square });
@@ -173,7 +290,6 @@ export default function Board({
         setDragStartPos({ x: clientX, y: clientY });
         setDragging(true);
 
-        // Set legal moves for the dragged piece
         selectPiece(square);
     }, [disabled, posToSquare, gameState, selectPiece]);
 
@@ -186,7 +302,6 @@ export default function Board({
 
         setDragPos({ x: clientX, y: clientY });
 
-        // Update hover square for highlighting
         const square = posToSquare(clientX, clientY);
         setHoverSquare(square);
     }, [dragging, dragPiece, posToSquare]);
@@ -197,7 +312,6 @@ export default function Board({
         const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
         const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : e.clientY;
 
-        // Check if it was a click (very small movement)
         const dx = clientX - dragStartPos.x;
         const dy = clientY - dragStartPos.y;
         const isClick = Math.abs(dx) < 5 && Math.abs(dy) < 5;
@@ -214,7 +328,6 @@ export default function Board({
                     return;
                 }
             }
-            // Invalid drop — keep piece selected but stop dragging
         }
 
         setDragging(false);
@@ -239,8 +352,8 @@ export default function Board({
     }, [dragging, handleDragMove, handleDragEnd]);
 
     // ===== RENDERING =====
-    const renderBoard = () => {
-        const squares = [];
+    const squares = useMemo(() => {
+        const result = [];
         const sqSize = getSquareSize();
 
         for (let rankIndex = 0; rankIndex < BOARD_CONFIG.RANKS; rankIndex++) {
@@ -260,22 +373,13 @@ export default function Board({
                 const isDragHover = hoverSquare?.file === file && hoverSquare?.rank === rank && dragging;
                 const isDragSource = dragging && dragPiece?.square.file === file && dragPiece?.square.rank === rank;
 
-                // Background color
-                let bgColor = squareColor === 'light' ? COLORS.board.light : COLORS.board.dark;
-                if (isSelected && !isDragSource) bgColor = COLORS.board.selected;
-                else if (isLastMoveFrom || isLastMoveTo) bgColor = COLORS.board.lastMove;
-                if (isKingInCheck) bgColor = COLORS.board.check;
-                if (isDragHover && isLegalMove) bgColor = COLORS.board.selected;
+                const showPiece = !!piece && !isDragSource;
+                const isPlayerPiece = !!piece && piece.color === gameState.turn;
 
-                // Should we show piece here? Hide if being dragged
-                const showPiece = piece && !isDragSource;
-
-                // Check if this piece is currently animating
-                const isAnimatingHere = animatingPiece &&
+                const isAnimatingHere = !!(animatingPiece &&
                     animatingPiece.toFile === file &&
-                    animatingPiece.toRank === rank;
+                    animatingPiece.toRank === rank);
 
-                // Calculate animation offset (from → to)
                 let animOffsetX = 0;
                 let animOffsetY = 0;
                 if (isAnimatingHere && animatingPiece) {
@@ -287,95 +391,40 @@ export default function Board({
                     animOffsetY = (fromRankIdx - toRankIdx) * (sqSize * BOARD_CONFIG.RANKS / BOARD_CONFIG.FILES);
                 }
 
-                squares.push(
-                    <div
+                result.push(
+                    <BoardSquare
                         key={squareKey}
-                        className="relative flex items-center justify-center select-none"
-                        style={{
-                            backgroundColor: bgColor,
-                            aspectRatio: '1',
-                            cursor: disabled ? 'default' : piece && piece.color === gameState.turn ? 'grab' : isLegalMove ? 'pointer' : 'default',
-                        }}
-                        onClick={() => handleSquareClick(file, rank)}
-                    >
-                        {/* Coordinate labels */}
-                        {fileIndex === 0 && (
-                            <span
-                                className="absolute top-0.5 left-0.5 text-[10px] font-bold leading-none pointer-events-none"
-                                style={{ color: squareColor === 'light' ? COLORS.board.dark : COLORS.board.light }}
-                            >
-                                {rank + 1}
-                            </span>
-                        )}
-                        {rankIndex === BOARD_CONFIG.RANKS - 1 && (
-                            <span
-                                className="absolute bottom-0.5 right-1 text-[10px] font-bold leading-none pointer-events-none"
-                                style={{ color: squareColor === 'light' ? COLORS.board.dark : COLORS.board.light }}
-                            >
-                                {String.fromCharCode(97 + file)}
-                            </span>
-                        )}
-
-                        {/* Legal move dot */}
-                        {isLegalMove && !isCapture && (
-                            <div
-                                className="absolute rounded-full pointer-events-none z-10"
-                                style={{
-                                    width: '28%',
-                                    height: '28%',
-                                    backgroundColor: 'rgba(0,0,0,0.12)',
-                                }}
-                            />
-                        )}
-
-                        {/* Capture ring */}
-                        {isCapture && (
-                            <div
-                                className="absolute inset-[4%] rounded-full pointer-events-none z-10"
-                                style={{
-                                    border: '5px solid rgba(0,0,0,0.12)',
-                                }}
-                            />
-                        )}
-
-                        {/* Chess piece with smooth move animation */}
-                        {showPiece && (
-                            <span
-                                className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
-                                style={{
-                                    fontSize: `${sqSize * 0.78}px`,
-                                    lineHeight: 1,
-                                    transform: isAnimatingHere
-                                        ? `translate(${animOffsetX}px, ${animOffsetY}px)`
-                                        : 'translate(0, 0)',
-                                    transition: isAnimatingHere ? 'none' : 'transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1)',
-                                    color: piece.color === 'white' ? '#FFFFFF' : '#1a1a1a',
-                                    textShadow: piece.color === 'white'
-                                        ? '-1px -1px 0 #333, 1px -1px 0 #333, -1px 1px 0 #333, 1px 1px 0 #333, 0 0 4px rgba(0,0,0,0.3)'
-                                        : '-1px -1px 0 #666, 1px -1px 0 #666, -1px 1px 0 #666, 1px 1px 0 #666, 0 0 3px rgba(0,0,0,0.2)',
-                                    willChange: 'transform',
-                                }}
-                                ref={(el) => {
-                                    // Trigger reflow to start CSS transition from offset to 0
-                                    if (el && isAnimatingHere) {
-                                        el.getBoundingClientRect();
-                                        requestAnimationFrame(() => {
-                                            el.style.transform = 'translate(0, 0)';
-                                            el.style.transition = 'transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
-                                        });
-                                    }
-                                }}
-                            >
-                                {PIECE_UNICODE[piece.color][piece.type]}
-                            </span>
-                        )}
-                    </div>
+                        file={file}
+                        rank={rank}
+                        fileIndex={fileIndex}
+                        rankIndex={rankIndex}
+                        piece={piece}
+                        squareColor={squareColor}
+                        isSelected={isSelected}
+                        isLastMoveFrom={!!isLastMoveFrom}
+                        isLastMoveTo={!!isLastMoveTo}
+                        isLegalMove={isLegalMove}
+                        isCapture={isCapture}
+                        isKingInCheck={!!isKingInCheck}
+                        isDragHover={isDragHover}
+                        isDragSource={isDragSource}
+                        showPiece={showPiece}
+                        isAnimatingHere={isAnimatingHere}
+                        animOffsetX={animOffsetX}
+                        animOffsetY={animOffsetY}
+                        sqSize={sqSize}
+                        disabled={disabled}
+                        isPlayerPiece={isPlayerPiece}
+                        onClick={handleSquareClick}
+                    />
                 );
             }
         }
 
-        return squares;
-    };
+        return result;
+    }, [gameState.board, gameState.turn, gameState.isCheck, flipped, disabled,
+        selectedSquare, lastMove, legalMoveSquares, captureSquares,
+        hoverSquare, dragging, dragPiece, animatingPiece, getSquareSize, handleSquareClick]);
 
     return (
         <div className="inline-block touch-none">
@@ -391,7 +440,7 @@ export default function Board({
                 onMouseDown={handleDragStart}
                 onTouchStart={handleDragStart}
             >
-                {renderBoard()}
+                {squares}
             </div>
 
             {/* Floating drag piece */}
