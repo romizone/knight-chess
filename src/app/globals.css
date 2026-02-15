@@ -69,6 +69,7 @@ a { color: inherit; text-decoration: none; }
 }
 .card-glow-green { box-shadow: 0 0 20px rgba(129, 182, 76, 0.2); border-color: rgba(129, 182, 76, 0.3); }
 .card-glow-gold { box-shadow: 0 0 20px rgba(229, 196, 126, 0.2); border-color: rgba(229, 196, 126, 0.3); }
+.card-glow-yellow { box-shadow: 0 0 20px rgba(229, 196, 126, 0.2); border-color: rgba(229, 196, 126, 0.3); }
 
 .token-badge {
   display: inline-flex; align-items: center; gap: 6px;

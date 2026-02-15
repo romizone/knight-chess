@@ -190,3 +190,23 @@ export const gamesRelations = relations(games, ({ one, many }) => ({
 export const movesRelations = relations(moves, ({ one }) => ({
   game: one(games, { fields: [moves.gameId], references: [games.id] }),
 }));
+
+// ========== MATCHMAKING QUEUE ==========
+
+export const matchmakingQueueStatusEnum = pgEnum('matchmaking_queue_status', ['waiting', 'matched', 'cancelled', 'expired']);
+
+export const matchmakingQueue = pgTable('matchmaking_queue', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  status: matchmakingQueueStatusEnum('status').default('waiting').notNull(),
+  rating: integer('rating').notNull(),
+  gameId: uuid('game_id').references(() => games.id),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+  matchedAt: timestamp('matched_at', { mode: 'date' }),
+  expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+});
+
+export const matchmakingQueueRelations = relations(matchmakingQueue, ({ one }) => ({
+  user: one(users, { fields: [matchmakingQueue.userId], references: [users.id] }),
+  game: one(games, { fields: [matchmakingQueue.gameId], references: [games.id] }),
+}));
