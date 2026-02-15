@@ -21,7 +21,7 @@ export default function PlayPage() {
                 <div className="flex items-center justify-center gap-3 mb-4">
                     <span className="text-5xl">&#9822;</span>
                     <h1 className="text-4xl font-bold">
-                        Knight <span className="text-primary">Chess</span>
+                        AI Knight <span className="text-primary">Chess</span>
                     </h1>
                 </div>
                 <p className="text-gray-400">Choose your game mode</p>
