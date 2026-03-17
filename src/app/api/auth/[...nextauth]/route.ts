@@ -7,16 +7,29 @@ import { getAuthOptions } from '@/lib/auth/options';
 let _handler: ReturnType<typeof NextAuth> | null = null;
 function getHandler() {
   if (!_handler) {
-    _handler = NextAuth(getAuthOptions());
+    const options = getAuthOptions();
+    // Enable debug in non-production or when explicitly set
+    options.debug = process.env.NEXTAUTH_DEBUG === 'true';
+    _handler = NextAuth(options);
   }
   return _handler;
 }
 
 // App Router passes (req, context) automatically when we export like this
 export async function GET(...args: Parameters<ReturnType<typeof NextAuth>>) {
-  return getHandler()(...args);
+  try {
+    return await getHandler()(...args);
+  } catch (error) {
+    console.error('[NextAuth] GET handler error:', error);
+    throw error;
+  }
 }
 
 export async function POST(...args: Parameters<ReturnType<typeof NextAuth>>) {
-  return getHandler()(...args);
+  try {
+    return await getHandler()(...args);
+  } catch (error) {
+    console.error('[NextAuth] POST handler error:', error);
+    throw error;
+  }
 }

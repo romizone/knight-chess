@@ -2,8 +2,22 @@
 
 import { motion } from 'framer-motion';
 import { signIn } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
+const errorMessages: Record<string, string> = {
+    OAuthCallback: 'Login failed. Please try again.',
+    OAuthSignin: 'Could not start login. Please try again.',
+    OAuthCreateAccount: 'Could not create account. Please try again.',
+    Callback: 'Login failed. Please try again.',
+    Default: 'Something went wrong. Please try again.',
+};
+
+function LoginContent() {
+    const searchParams = useSearchParams();
+    const error = searchParams.get('error');
+    const errorMessage = error ? (errorMessages[error] || errorMessages.Default) : null;
+
     const handleGoogleLogin = async () => {
         try {
             await signIn('google', { callbackUrl: '/play' });
@@ -27,6 +41,13 @@ export default function LoginPage() {
                     </h1>
                     <p className="text-gray-400 mt-2">5 Knights. Infinite Strategy.</p>
                 </div>
+
+                {/* Error Message */}
+                {errorMessage && (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-6 text-red-400 text-sm">
+                        {errorMessage}
+                    </div>
+                )}
 
                 {/* Login Benefits */}
                 <div className="bg-surface rounded-lg p-4 mb-6 text-left">
@@ -85,5 +106,13 @@ export default function LoginPage() {
                 </p>
             </motion.div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense>
+            <LoginContent />
+        </Suspense>
     );
 }
