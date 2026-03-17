@@ -8,9 +8,6 @@ import { eq } from 'drizzle-orm';
 export function getAuthOptions(): NextAuthOptions {
   const db = getDatabase();
 
-  const useSecureCookies = process.env.NEXTAUTH_URL?.startsWith('https://') ||
-    !!process.env.VERCEL_URL;
-
   return {
     adapter: DrizzleAdapter(db, {
       usersTable: users,
@@ -22,13 +19,6 @@ export function getAuthOptions(): NextAuthOptions {
       GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID!,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        authorization: {
-          params: {
-            prompt: 'consent',
-            access_type: 'offline',
-            response_type: 'code',
-          },
-        },
       }),
     ],
     callbacks: {
@@ -57,7 +47,6 @@ export function getAuthOptions(): NextAuthOptions {
             }
           } catch (error) {
             console.error('[Auth] signIn callback error (non-fatal):', error);
-            // Don't block login if bonus check fails
           }
         }
         return true;
@@ -92,64 +81,7 @@ export function getAuthOptions(): NextAuthOptions {
     session: {
       strategy: 'database',
     },
-    cookies: {
-      sessionToken: {
-        name: useSecureCookies
-          ? '__Secure-next-auth.session-token'
-          : 'next-auth.session-token',
-        options: {
-          httpOnly: true,
-          sameSite: 'lax',
-          path: '/',
-          secure: useSecureCookies,
-        },
-      },
-      callbackUrl: {
-        name: useSecureCookies
-          ? '__Secure-next-auth.callback-url'
-          : 'next-auth.callback-url',
-        options: {
-          sameSite: 'lax',
-          path: '/',
-          secure: useSecureCookies,
-        },
-      },
-      csrfToken: {
-        name: useSecureCookies
-          ? '__Host-next-auth.csrf-token'
-          : 'next-auth.csrf-token',
-        options: {
-          httpOnly: true,
-          sameSite: 'lax',
-          path: '/',
-          secure: useSecureCookies,
-        },
-      },
-      pkceCodeVerifier: {
-        name: useSecureCookies
-          ? '__Secure-next-auth.pkce.code_verifier'
-          : 'next-auth.pkce.code_verifier',
-        options: {
-          httpOnly: true,
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 900,
-          secure: useSecureCookies,
-        },
-      },
-      state: {
-        name: useSecureCookies
-          ? '__Secure-next-auth.state'
-          : 'next-auth.state',
-        options: {
-          httpOnly: true,
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 900,
-          secure: useSecureCookies,
-        },
-      },
-    },
+    debug: process.env.NODE_ENV === 'development',
   };
 }
 
